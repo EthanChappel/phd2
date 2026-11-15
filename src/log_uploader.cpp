@@ -1374,7 +1374,7 @@ void LogUploadDialog::OnBackClick(wxCommandEvent& event)
         SetTitle(STEP1_TITLE);
         m_text->Show();
         m_html->Hide();
-        m_grid->Show();
+        m_grid->Show(true);
         m_recent->Show(!s_recent.empty());
         m_includeEmpty->Show();
         m_back->Hide();
