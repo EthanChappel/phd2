@@ -47,9 +47,11 @@ AboutDialog::AboutDialog()
     : wxDialog(pFrame, wxID_ANY, wxString::Format(_("About %s"), APPNAME), wxDefaultPosition, wxDefaultSize,
                wxCAPTION | wxCLOSE_BOX)
 {
-    SetBackgroundColour(*wxWHITE);
 
     wxBoxSizer *pSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    wxString backgroundColor = GetBackgroundColour().GetAsString(wxC2S_HTML_SYNTAX);
+    wxString color = GetForegroundColour().GetAsString(wxC2S_HTML_SYNTAX);
 
 #include "icons/phd2_64.png.h"
     wxBitmap phd2(wxBITMAP_PNG_FROM_DATA(phd2_64));
@@ -57,7 +59,8 @@ AboutDialog::AboutDialog()
 
     wxFileSystem::AddHandler(new wxMemoryFSHandler);
     wxMemoryFSHandler::AddFile("about.html",
-                               wxString::Format("<html><body>"
+                               wxString::Format("<html><body style=\"background-color: %s;\">"
+                                                "<font color=\"%s\">"
                                                 "<font size=\"5\">"
                                                 "<b>%s %s</b></font><br>"
                                                 "<table CELLPADDING=0 cellspacing=10><tr><td>"
@@ -216,8 +219,9 @@ AboutDialog::AboutDialog()
                                                 "<a href=\"http://dx.doi.org/10.1109/TCST.2015.2420629\">Gaussian Process "
                                                 "Based Predictive Control<br>for Periodic Error Correction</a>"
                                                 "</font>"
+                                                "</font>"
                                                 "</body></html>",
-                                                APPNAME, FULLVER));
+                                                backgroundColor, color,	APPNAME, FULLVER));
     wxHtmlWindow *pHtml;
     pHtml = new wxHtmlWindow(this, ABOUT_LINK, wxDefaultPosition, wxSize(640, 500), wxHW_SCROLLBAR_AUTO);
     pHtml->SetBorders(0);

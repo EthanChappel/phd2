@@ -55,6 +55,7 @@
 #include <wx/textwrapper.h>
 #include <wx/valnum.h>
 
+static const int DefaultAppearance = APPEARANCE_SYSTEM;
 static const int DefaultNoiseReductionMethod = 0;
 static const double DefaultDitherScaleFactor = 1.00;
 static const bool DefaultDitherRaOnly = false;
@@ -227,6 +228,9 @@ MyFrame::MyFrame()
 
     bool serverMode = pConfig->Global.GetBoolean("/ServerMode", DefaultServerMode);
     SetServerMode(serverMode);
+
+	int appearance = pConfig->Global.GetInt("/Appearance", DefaultAppearance);
+    SetAppearance(appearance);
 
     m_sampling = 1.0;
 
@@ -2226,6 +2230,35 @@ bool MyFrame::SetNoiseReductionMethod(int noiseReductionMethod)
     return bError;
 }
 
+bool MyFrame::SetAppearance(int appearance)
+{
+    bool bError = false;
+
+	try
+    {
+        switch (appearance)
+        {
+        case APPEARANCE_SYSTEM:
+        case APPEARANCE_LIGHT:
+        case APPEARANCE_DARK:
+            break;
+        default:
+            throw ERROR_INFO("invalid appearance");
+        }
+        m_appearance = (Appearance) appearance;
+    }
+    catch (const wxString& Msg)
+    {
+        POSSIBLY_UNUSED(Msg);
+        bError = true;
+        m_appearance = (Appearance) DefaultAppearance;
+    }
+
+	pConfig->Global.SetInt("/Appearance", (int) m_appearance);
+
+	return bError;
+}
+
 bool MyFrame::SetDitherScaleFactor(double ditherScaleFactor)
 {
     bool bError = false;
@@ -2946,8 +2979,9 @@ void MyFrameConfigDialogPane::LayoutControls(BrainCtrlIdMap& CtrlMap)
     wxFlexGridSizer *pTopGrid = new wxFlexGridSizer(2, 2, 15, 15);
 
     pTopGrid->Add(GetSizerCtrl(CtrlMap, AD_szLanguage), grid_flags);
-    pTopGrid->Add(GetSingleCtrl(CtrlMap, AD_cbResetConfig), grid_flags);
+    pTopGrid->Add(GetSizerCtrl(CtrlMap, AD_szAppearance), grid_flags);
     pTopGrid->Add(GetSingleCtrl(CtrlMap, AD_cbDontAsk), grid_flags);
+    pTopGrid->Add(GetSingleCtrl(CtrlMap, AD_cbResetConfig), grid_flags);
     this->Add(pTopGrid, sizer_flags);
     this->Add(GetSizerCtrl(CtrlMap, AD_szSoftwareUpdate), sizer_flags);
     this->Add(GetSizerCtrl(CtrlMap, AD_szLogFileInfo), sizer_flags);
@@ -3122,6 +3156,15 @@ MyFrameConfigDialogCtrlSet::MyFrameConfigDialogCtrlSet(MyFrame *pFrame, Advanced
     m_pLanguage = new wxChoice(parent, wxID_ANY, wxPoint(-1, -1), wxSize(width + 35, -1), PhdLanguages.Names());
     AddLabeledCtrl(CtrlMap, AD_szLanguage, _("Language"), m_pLanguage,
                    wxString::Format(_("%s Language. You'll have to restart PHD to take effect."), APPNAME));
+
+	wxString appearance_choices[] = { _("System default"), _("Light"), _("Dark") };
+    
+	width = StringArrayWidth(appearance_choices, WXSIZEOF(appearance_choices));
+	parent = GetParentWindow(AD_szAppearance);
+    m_pAppearance =
+		new wxChoice(parent, wxID_ANY, wxPoint(-1, -1), wxSize(width + 35, -1), WXSIZEOF(appearance_choices), appearance_choices);
+    AddLabeledCtrl(CtrlMap, AD_szAppearance, _("Appearance"), m_pAppearance,
+                   wxString::Format(_("%s Appearance. You'll have to restart PHD to take effect."), APPNAME));
 
     // Software Update
     {
@@ -3324,6 +3367,10 @@ void MyFrameConfigDialogCtrlSet::LoadValues()
     m_pLanguage->SetSelection(m_oldLanguageChoice);
     m_pLanguage->Enable(!pFrame->CaptureActive);
 
+	m_pAppearance->SetSelection((int) pFrame->GetAppearance());
+    m_pAppearance->Enable(!pFrame->CaptureActive && wxGetApp().CanSetAppearance());
+    m_oldAppearanceChoice = (int) m_pAppearance->GetSelection();
+
     m_pLogDir->SetValue(GuideLog.GetLogDir());
     m_pLogDir->Enable(!pFrame->CaptureActive);
     m_pSelectDir->Enable(!pFrame->CaptureActive);
@@ -3398,6 +3445,7 @@ void MyFrameConfigDialogCtrlSet::UnloadValues()
         }
 
         m_pFrame->SetNoiseReductionMethod(m_pNoiseReduction->GetSelection());
+        m_pFrame->SetAppearance(m_pAppearance->GetSelection());
         m_pFrame->SetDitherMode(m_ditherRandom->GetValue() ? DITHER_RANDOM : DITHER_SPIRAL);
         m_pFrame->SetDitherRaOnly(m_ditherRaOnly->GetValue());
         m_pFrame->SetDitherScaleFactor(m_ditherScaleFactor->GetValue());
@@ -3414,12 +3462,30 @@ void MyFrameConfigDialogCtrlSet::UnloadValues()
         int idx = m_pLanguage->GetSelection();
         int langid = PhdLanguages.LangId(idx);
         pConfig->Global.SetInt("/wxLanguage", langid);
-        if (m_oldLanguageChoice != idx)
+
+        bool languageChanged = m_oldLanguageChoice != idx;
+        bool appearanceChanged = m_oldAppearanceChoice != m_pAppearance->GetSelection();
+        if (languageChanged || appearanceChanged)
         {
             wxString title = TranslateStrToLang(wxTRANSLATE("Restart PHD2"), langid);
-            wxString msg = TranslateStrToLang(wxTRANSLATE("You must restart PHD2 for the language change to take effect.\n"
-                                                          "Would you like to restart PHD2 now?"),
-                                              langid);
+
+            wxString msg;
+			if (languageChanged && !appearanceChanged)
+			{
+				msg = TranslateStrToLang(wxTRANSLATE("You must restart PHD2 for the language change to take effect.\n"
+					"Would you like to restart PHD2 now?"), langid);
+			}
+			else if (appearanceChanged && !languageChanged)
+			{
+				msg = TranslateStrToLang(wxTRANSLATE("You must restart PHD2 for the appearance change to take effect.\n"
+					"Would you like to restart PHD2 now?"), langid);
+            }
+            else
+            {
+                msg = TranslateStrToLang(wxTRANSLATE("You must restart PHD2 for the language and appearance changes to take effect.\n"
+					"Would you like to restart PHD2 now?"), langid);
+            }
+
             int val = wxMessageBox(msg, title, wxYES_NO | wxCENTRE);
             if (val == wxYES)
                 wxGetApp().RestartApp();

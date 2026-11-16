@@ -215,6 +215,7 @@ class PhdApp : public wxApp
 {
     wxSingleInstanceChecker *m_instanceChecker;
     long m_instanceNumber;
+    bool m_canSetAppearance;
     bool m_resetConfig;
     wxString m_resourcesDir;
     wxDateTime m_logFileTime;
@@ -243,6 +244,7 @@ public:
     static bool IsSameImagingDay(const wxDateTime& a, const wxDateTime& b);
     void CheckLogRollover();
     wxString UserAgent() const;
+    bool CanSetAppearance() const;
 };
 
 wxDECLARE_APP(PhdApp);

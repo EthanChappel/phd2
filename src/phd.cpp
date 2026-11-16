@@ -602,6 +602,14 @@ bool PhdApp::OnInit()
     wxTranslations::Get()->SetLanguage((wxLanguage) langid);
     Debug.Write(wxString::Format("locale: wxTranslations language set to %d\n", langid));
 
+#if wxCHECK_VERSION(3, 3, 0)
+    m_canSetAppearance =
+        SetAppearance((wxAppBase::Appearance) pConfig->Global.GetInt("/Appearance", (int) wxAppBase::Appearance::System)) ==
+        wxApp::AppearanceResult::Ok;
+#else
+    m_canSetAppearance = false;
+#endif
+
     Debug.RemoveOldFiles();
     GuideLog.RemoveOldFiles();
 
@@ -739,6 +747,11 @@ void PhdApp::CheckLogRollover()
 wxString PhdApp::UserAgent() const
 {
     return _T("phd2/") FULLVER _T(" (") PHD_OSNAME _T(")");
+}
+
+bool PhdApp::CanSetAppearance() const
+{
+    return m_canSetAppearance;
 }
 
 void PhdApp::ResetConfiguration()

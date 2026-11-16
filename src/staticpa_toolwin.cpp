@@ -627,8 +627,10 @@ void StaticPaToolWin::FillPanel()
     }
     m_manualCheck->SetValue(!m_auto);
 
-    wxString html = wxString::Format("<html><body style=\"background-color:#cccccc;\">%s</body></html>",
-                                     m_auto ? c_autoInstr : c_manualInstr);
+	wxString backgroundColor = GetBackgroundColour().GetAsString(wxC2S_HTML_SYNTAX);
+
+    wxString html = wxString::Format("<html><body style=\"background-color:%s;\">%s</body></html>",
+                                     backgroundColor, m_auto ? c_autoInstr : c_manualInstr);
     m_instructionsText->SetPage(html);
 
     m_star1Button->SetLabel(_("Rotate"));

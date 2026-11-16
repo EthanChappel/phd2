@@ -109,6 +109,13 @@ struct DitherSpiral
     void GetDither(double amount, bool raOnly, double *dRA, double *dDec);
 };
 
+enum Appearance
+{
+	APPEARANCE_SYSTEM,
+    APPEARANCE_LIGHT,
+    APPEARANCE_DARK,
+};
+
 struct SingleExposure
 {
     bool enabled;
@@ -143,6 +150,8 @@ class MyFrameConfigDialogCtrlSet : public ConfigDialogCtrlSet
     wxTextCtrl *m_pFocalLength;
     wxChoice *m_pLanguage;
     int m_oldLanguageChoice;
+    wxChoice *m_pAppearance;
+    int m_oldAppearanceChoice;
     wxTextCtrl *m_pLogDir;
     wxButton *m_pSelectDir;
     wxCheckBox *m_EnableImageLogging;
@@ -180,7 +189,9 @@ class MyFrame : public wxFrame
 {
 protected:
     NOISE_REDUCTION_METHOD GetNoiseReductionMethod() const;
+    Appearance GetAppearance() const;
     bool SetNoiseReductionMethod(int noiseReductionMethod);
+    bool SetAppearance(int appearance);
 
     bool GetServerMode() const;
     bool SetServerMode(bool val);
@@ -197,6 +208,7 @@ protected:
 
 private:
     NOISE_REDUCTION_METHOD m_noiseReductionMethod;
+    Appearance m_appearance;
     DitherMode m_ditherMode;
     double m_ditherScaleFactor;
     bool m_ditherRaOnly;
@@ -757,6 +769,11 @@ inline DitherMode MyFrame::GetDitherMode() const
 inline NOISE_REDUCTION_METHOD MyFrame::GetNoiseReductionMethod() const
 {
     return m_noiseReductionMethod;
+}
+
+inline Appearance MyFrame::GetAppearance() const
+{
+    return m_appearance;
 }
 
 inline double MyFrame::GetDitherScaleFactor() const
