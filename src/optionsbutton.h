@@ -38,9 +38,9 @@
 class OptionsButton : public wxPanel
 {
     bool m_highlighted;
+    bool m_pressed;
     wxString m_label;
     wxBitmap *m_bmp;
-    wxBitmap *m_bmp_bold;
 
 public:
     OptionsButton(wxWindow *parent, wxWindowID id, const wxString& label, const wxPoint& pos = wxDefaultPosition,
@@ -48,6 +48,7 @@ public:
     ~OptionsButton();
 
     void SetLabel(const wxString& label);
+    bool Enable(bool enable = true) override;
 
 private:
     wxSize GetMinSize() const;
@@ -57,6 +58,11 @@ private:
     void OnMouseMove(wxMouseEvent& evt);
     void OnMouseLeave(wxMouseEvent& evt);
     void OnClick(wxMouseEvent& evt);
+    void OnLeftDown(wxMouseEvent& evt);
+    void OnLeftUp(wxMouseEvent& evt);
+    void OnSysColourChanged(wxSysColourChangedEvent& event);
+
+	void DrawDownArrow();
 
     wxDECLARE_EVENT_TABLE();
 };

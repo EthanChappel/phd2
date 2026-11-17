@@ -32,11 +32,13 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#include <wx/dc.h>
+#include <wx/renderer.h>
+
 #include "phd.h"
 #include "optionsbutton.h"
 
 #include "icons/down_arrow.xpm"
-#include "icons/down_arrow_bold.xpm"
 
 // clang-format off
 wxBEGIN_EVENT_TABLE(OptionsButton, wxPanel)
@@ -44,6 +46,7 @@ wxBEGIN_EVENT_TABLE(OptionsButton, wxPanel)
     EVT_MOTION(OptionsButton::OnMouseMove)
     EVT_LEAVE_WINDOW(OptionsButton::OnMouseLeave)
     EVT_PAINT(OptionsButton::OnPaint)
+	EVT_SYS_COLOUR_CHANGED(OptionsButton::OnSysColourChanged)
     EVT_LEFT_UP(OptionsButton::OnClick)
 wxEND_EVENT_TABLE();
 // clang-format on
@@ -56,10 +59,9 @@ enum
 
 OptionsButton::OptionsButton(wxWindow *parent, wxWindowID id, const wxString& label, const wxPoint& pos, const wxSize& size,
                              long style, const wxString& name)
-    : wxPanel(parent, id, pos, size, style, name), m_highlighted(false), m_label(label)
+    : wxPanel(parent, id, pos, size, style, name), m_highlighted(false), m_pressed(false), m_label(label)
 {
-    m_bmp = new wxBitmap(down_arrow);
-    m_bmp_bold = new wxBitmap(down_arrow_bold);
+    DrawDownArrow();
 
     SetBackgroundStyle(wxBG_STYLE_PAINT);
 }
@@ -67,7 +69,6 @@ OptionsButton::OptionsButton(wxWindow *parent, wxWindowID id, const wxString& la
 OptionsButton::~OptionsButton()
 {
     delete m_bmp;
-    delete m_bmp_bold;
 }
 
 wxSize OptionsButton::GetMinSize() const
@@ -82,22 +83,29 @@ void OptionsButton::SetLabel(const wxString& label)
     Refresh();
 }
 
+bool OptionsButton::Enable(bool enable)
+{
+    if (!wxPanel::Enable(enable))
+    {
+        return false;
+    }
+    DrawDownArrow();
+    Refresh();
+    return true;
+}
+
 void OptionsButton::OnPaint(wxPaintEvent& evt)
 {
     wxBufferedPaintDC dc(this);
-
-    if (m_highlighted)
-        dc.SetPen(wxPen(wxColor(0, 0, 0)));
-    else
-        dc.SetPen(wxPen(wxColor(56, 56, 56)));
-
-    dc.SetBrush(wxBrush(wxColor(200, 200, 200)));
-
     wxSize txtsz = GetTextExtent(m_label);
     wxSize size(GetSize());
     int xbmp = size.GetWidth() - m_bmp->GetWidth() - PADX;
     wxPoint bmp_pos(xbmp, 7);
     int xtxt;
+
+    dc.SetBackground(wxBrush(GetBackgroundColour()));
+    dc.Clear();
+
     if (GetWindowStyleFlag() & wxALIGN_CENTER_HORIZONTAL)
     {
         xtxt = (size.GetWidth() - txtsz.GetWidth()) / 2;
@@ -107,21 +115,25 @@ void OptionsButton::OnPaint(wxPaintEvent& evt)
         xtxt = PADX;
     }
 
-    dc.DrawRectangle(wxPoint(0, 0), size);
-    dc.SetTextBackground(wxColor(200, 200, 200));
-
+    int flags = 0;
     if (m_highlighted)
     {
-        dc.SetTextForeground(wxColor(0, 0, 0));
-        dc.DrawText(m_label, xtxt, PADY);
-        dc.DrawBitmap(*m_bmp_bold, bmp_pos);
-    }
-    else
+		flags |= wxCONTROL_CURRENT;
+	}
+	if (m_pressed)
     {
-        dc.SetTextForeground(wxColor(56, 56, 56));
-        dc.DrawText(m_label, xtxt, PADY);
-        dc.DrawBitmap(*m_bmp, bmp_pos);
+        flags |= wxCONTROL_PRESSED;
     }
+	if (!IsEnabled())
+    {
+        flags |= wxCONTROL_DISABLED;
+        dc.SetTextForeground(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
+    }
+
+    wxRendererNative::Get().DrawPushButton(this, dc, wxRect(size), flags);
+
+	dc.DrawText(m_label, xtxt, PADY);
+    dc.DrawBitmap(*m_bmp, bmp_pos, true);
 }
 
 void OptionsButton::OnMouseEnter(wxMouseEvent& event)
@@ -155,4 +167,38 @@ void OptionsButton::OnClick(wxMouseEvent& event)
 #endif
     m_highlighted = false;
     Refresh();
+}
+
+void OptionsButton::OnLeftDown(wxMouseEvent& event)
+{
+    m_pressed = true;
+    Refresh();
+}
+
+void OptionsButton::OnLeftUp(wxMouseEvent& event)
+{
+    m_pressed = false;
+    Refresh();
+}
+
+void OptionsButton::OnSysColourChanged(wxSysColourChangedEvent& event)
+{
+    DrawDownArrow();
+    Refresh();
+    event.Skip();
+}
+
+void OptionsButton::DrawDownArrow()
+{
+    wxImage *tmp = new wxImage(down_arrow);
+
+    if (tmp->HasMask()) {
+        tmp->InitAlpha();
+    }
+
+    wxColour fg = IsEnabled() ? GetForegroundColour() : wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+
+    tmp->Replace(255, 255, 255, fg.GetRed(), fg.GetGreen(), fg.GetBlue());
+
+    m_bmp = new wxBitmap(*tmp);
 }
